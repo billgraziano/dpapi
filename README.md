@@ -1,2 +1,2 @@
-# dpapi
-Wrapper for Windows DPAPI
+# GO Windows DPAPI Wrapper
+
