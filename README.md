@@ -28,4 +28,6 @@ References
 * [DPAPI on Wikipedia](https://en.wikipedia.org/wiki/Data_Protection_API)
 * [Windows Data Protection](https://docs.microsoft.com/en-us/previous-versions/ms995355(v=msdn.10)?redirectedfrom=MSDN) (microsoft.com)
 * [Troubleshooting the DPAPI](https://support.microsoft.com/en-us/help/309408/how-to-troubleshoot-the-data-protection-api-dpapi) (microsoft.com)
+* [CryptProtectData function](https://docs.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata) (microsoft.com)
+* [Example C Program: Using CryptProtectData](https://docs.microsoft.com/en-us/windows/win32/seccrypto/example-c-program-using-cryptprotectdata) (microsoft.com)
 
