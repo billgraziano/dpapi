@@ -2,10 +2,10 @@ package dpapi
 
 import (
 	"encoding/base64"
-	"syscall"
 	"unsafe"
 
 	"github.com/pkg/errors"
+	"golang.org/x/sys/windows"
 )
 
 const (
@@ -13,12 +13,10 @@ const (
 )
 
 var (
-	dllcrypt32  = syscall.NewLazyDLL("Crypt32.dll")
-	dllkernel32 = syscall.NewLazyDLL("Kernel32.dll")
+	dllcrypt32 = windows.NewLazySystemDLL("Crypt32.dll")
 
 	procEncryptData = dllcrypt32.NewProc("CryptProtectData")
 	procDecryptData = dllcrypt32.NewProc("CryptUnprotectData")
-	procLocalFree   = dllkernel32.NewProc("LocalFree")
 )
 
 type dataBlob struct {
@@ -61,7 +59,7 @@ func EncryptBytes(data []byte) ([]byte, error) {
 	if r == 0 {
 		return nil, errors.Wrap(err, "procencryptdata")
 	}
-	defer procLocalFree.Call(uintptr(unsafe.Pointer(outblob.pbData)))
+	defer windows.LocalFree(windows.Handle(unsafe.Pointer(outblob.pbData)))
 	return outblob.toByteArray(), nil
 }
 
@@ -72,13 +70,12 @@ func DecryptBytes(data []byte) ([]byte, error) {
 	if r == 0 {
 		return nil, errors.Wrap(err, "procdecryptdata")
 	}
-	defer procLocalFree.Call(uintptr(unsafe.Pointer(outblob.pbData)))
+	defer windows.LocalFree(windows.Handle(unsafe.Pointer(outblob.pbData)))
 	return outblob.toByteArray(), nil
 }
 
 // Decrypt a string to a string
 func Decrypt(data string) (string, error) {
-
 	raw, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return "", errors.Wrap(err, "decodestring")
