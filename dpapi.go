@@ -8,8 +8,11 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+type cryptProtect uint32
+
 const (
-	cryptProtectUIForbidden = 0x1
+	cryptProtectUIForbidden  cryptProtect = 0x1
+	cryptProtectLocalMachine cryptProtect = 0x4
 )
 
 var (
@@ -42,9 +45,13 @@ func (b *dataBlob) toByteArray() []byte {
 
 // Encrypt a string value to a base64 string
 func Encrypt(secret string) (string, error) {
+	return encrypt(secret, cryptProtectUIForbidden)
+}
+
+func encrypt(secret string, cf cryptProtect) (string, error) {
 	var result string
 	var b []byte
-	b, err := EncryptBytes([]byte(secret))
+	b, err := encryptBytes([]byte(secret), cf)
 	if err != nil {
 		return result, errors.Wrap(err, "encryptbytes")
 	}
@@ -54,8 +61,12 @@ func Encrypt(secret string) (string, error) {
 
 // EncryptBytes encrypts a byte array and returns a byte array
 func EncryptBytes(data []byte) ([]byte, error) {
+	return encryptBytes(data, cryptProtectUIForbidden)
+}
+
+func encryptBytes(data []byte, cf cryptProtect) ([]byte, error) {
 	var outblob dataBlob
-	r, _, err := procEncryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, cryptProtectUIForbidden, uintptr(unsafe.Pointer(&outblob)))
+	r, _, err := procEncryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
 	if r == 0 {
 		return nil, errors.Wrap(err, "procencryptdata")
 	}
@@ -63,10 +74,22 @@ func EncryptBytes(data []byte) ([]byte, error) {
 	return outblob.toByteArray(), nil
 }
 
+// EncryptBytesMachineLocal encrypts a byte array and returns a byte array and associates the data
+// encrypted with the current computer instead of with an individual user.
+func EncryptBytesMachineLocal(data []byte) ([]byte, error) {
+	return encryptBytes(data, cryptProtectUIForbidden|cryptProtectLocalMachine)
+}
+
+// EncryptMachineLocal a string value to a base64 string and associates the data encrypted with the
+// current computer instead of with an individual user.
+func EncryptMachineLocal(secret string) (string, error) {
+	return encrypt(secret, cryptProtectUIForbidden|cryptProtectLocalMachine)
+}
+
 // DecryptBytes decrypts a byte array returning a byte array
 func DecryptBytes(data []byte) ([]byte, error) {
 	var outblob dataBlob
-	r, _, err := procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, cryptProtectUIForbidden, uintptr(unsafe.Pointer(&outblob)))
+	r, _, err := procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cryptProtectUIForbidden), uintptr(unsafe.Pointer(&outblob)))
 	if r == 0 {
 		return nil, errors.Wrap(err, "procdecryptdata")
 	}
