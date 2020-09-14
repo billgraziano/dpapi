@@ -65,7 +65,7 @@ func encrypt(secret, entropy string, cf cryptProtect) (string, error) {
 
 // EncryptBytes encrypts a byte array and returns a byte array
 func EncryptBytes(data []byte) ([]byte, error) {
-	return encryptBytes(data, []byte{}, cryptProtectUIForbidden)
+	return encryptBytes(data, nil, cryptProtectUIForbidden)
 }
 
 func EncryptBytesEntropy(data, entropy []byte) ([]byte, error) {
@@ -94,7 +94,7 @@ func encryptBytes(data []byte, entropy []byte, cf cryptProtect) ([]byte, error) 
 // EncryptBytesMachineLocal encrypts a byte array and returns a byte array and associates the data
 // encrypted with the current computer instead of with an individual user.
 func EncryptBytesMachineLocal(data []byte) ([]byte, error) {
-	return encryptBytes(data, []byte{}, cryptProtectUIForbidden|cryptProtectLocalMachine)
+	return encryptBytes(data, nil, cryptProtectUIForbidden|cryptProtectLocalMachine)
 }
 
 func EncryptBytesMachineLocalEntropy(data, entropy []byte) ([]byte, error) {
@@ -137,7 +137,7 @@ func Decrypt(data string) (string, error) {
 
 // EncryptBytes encrypts a byte array and returns a byte array
 func DecryptBytes(data []byte) ([]byte, error) {
-	return decryptBytes(data, []byte{}, cryptProtectUIForbidden)
+	return decryptBytes(data, nil, cryptProtectUIForbidden)
 }
 
 func DecryptBytesEntropy(data, entropy []byte) ([]byte, error) {
