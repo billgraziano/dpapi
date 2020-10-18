@@ -59,13 +59,17 @@ func (b *dataBlob) free() error {
 
 // Encrypt a string value to a base64 string
 func Encrypt(secret string) (string, error) {
-	return encrypt(secret, cryptProtectUIForbidden)
+	return encrypt(secret, "", cryptProtectUIForbidden)
 }
 
-func encrypt(secret string, cf cryptProtect) (string, error) {
+func EncryptEntropy(secret, entropy string) (string, error) {
+	return encrypt(secret, entropy, cryptProtectUIForbidden)
+}
+
+func encrypt(secret, entropy string, cf cryptProtect) (string, error) {
 	var result string
 	var b []byte
-	b, err := encryptBytes([]byte(secret), cf)
+	b, err := encryptBytes([]byte(secret), []byte(entropy), cf)
 	if err != nil {
 		return result, errors.Wrap(err, "encryptbytes")
 	}
@@ -75,12 +79,25 @@ func encrypt(secret string, cf cryptProtect) (string, error) {
 
 // EncryptBytes encrypts a byte array and returns a byte array
 func EncryptBytes(data []byte) ([]byte, error) {
-	return encryptBytes(data, cryptProtectUIForbidden)
+	return encryptBytes(data, nil, cryptProtectUIForbidden)
 }
 
-func encryptBytes(data []byte, cf cryptProtect) ([]byte, error) {
-	var outblob dataBlob
-	r, _, err := procEncryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
+func EncryptBytesEntropy(data, entropy []byte) ([]byte, error) {
+	return encryptBytes(data, entropy, cryptProtectUIForbidden)
+}
+
+func encryptBytes(data []byte, entropy []byte, cf cryptProtect) ([]byte, error) {
+	var (
+		outblob dataBlob
+		r       uintptr
+		err     error
+	)
+
+	if len(entropy) > 0 {
+		r, _, err = procEncryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, uintptr(unsafe.Pointer(newBlob(entropy))), 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
+	} else {
+		r, _, err = procEncryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
+	}
 	if r == 0 {
 		return nil, errors.Wrap(err, "procencryptdata")
 	}
@@ -92,19 +109,35 @@ func encryptBytes(data []byte, cf cryptProtect) ([]byte, error) {
 // EncryptBytesMachineLocal encrypts a byte array and returns a byte array and associates the data
 // encrypted with the current computer instead of with an individual user.
 func EncryptBytesMachineLocal(data []byte) ([]byte, error) {
-	return encryptBytes(data, cryptProtectUIForbidden|cryptProtectLocalMachine)
+	return encryptBytes(data, nil, cryptProtectUIForbidden|cryptProtectLocalMachine)
+}
+
+func EncryptBytesMachineLocalEntropy(data, entropy []byte) ([]byte, error) {
+	return encryptBytes(data, entropy, cryptProtectUIForbidden|cryptProtectLocalMachine)
 }
 
 // EncryptMachineLocal a string value to a base64 string and associates the data encrypted with the
 // current computer instead of with an individual user.
 func EncryptMachineLocal(secret string) (string, error) {
-	return encrypt(secret, cryptProtectUIForbidden|cryptProtectLocalMachine)
+	return encrypt(secret, "", cryptProtectUIForbidden|cryptProtectLocalMachine)
+}
+
+func EncryptMachineLocalEntropy(secret, entropy string) (string, error) {
+	return encrypt(secret, entropy, cryptProtectUIForbidden|cryptProtectLocalMachine)
 }
 
 // DecryptBytes decrypts a byte array returning a byte array
-func DecryptBytes(data []byte) ([]byte, error) {
-	var outblob dataBlob
-	r, _, err := procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cryptProtectUIForbidden), uintptr(unsafe.Pointer(&outblob)))
+func decryptBytes(data, entropy []byte, cf cryptProtect) ([]byte, error) {
+	var (
+		outblob dataBlob
+		r       uintptr
+		err     error
+	)
+	if len(entropy) > 0 {
+		r, _, err = procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, uintptr(unsafe.Pointer(newBlob(entropy))), 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
+	} else {
+		r, _, err = procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
+	}
 	if r == 0 {
 		return nil, errors.Wrap(err, "procdecryptdata")
 	}
@@ -116,12 +149,25 @@ func DecryptBytes(data []byte) ([]byte, error) {
 
 // Decrypt a string to a string
 func Decrypt(data string) (string, error) {
+	return DecryptEntropy(data, "")
+}
+
+// EncryptBytes encrypts a byte array and returns a byte array
+func DecryptBytes(data []byte) ([]byte, error) {
+	return decryptBytes(data, nil, cryptProtectUIForbidden)
+}
+
+func DecryptBytesEntropy(data, entropy []byte) ([]byte, error) {
+	return decryptBytes(data, entropy, cryptProtectUIForbidden)
+}
+
+func DecryptEntropy(data, entropy string) (string, error) {
 	raw, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return "", errors.Wrap(err, "decodestring")
 	}
 
-	b, err := DecryptBytes(raw)
+	b, err := decryptBytes(raw, []byte(entropy), cryptProtectUIForbidden)
 	if err != nil {
 		return "", errors.Wrap(err, "decryptbytes")
 	}
