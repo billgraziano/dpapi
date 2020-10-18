@@ -43,6 +43,20 @@ func (b *dataBlob) toByteArray() []byte {
 	return d
 }
 
+func (b *dataBlob) zeroMemory() {
+	zeros := make([]byte, b.cbData)
+	copy((*[1 << 30]byte)(unsafe.Pointer(b.pbData))[:], zeros)
+}
+
+func (b *dataBlob) free() error {
+	_, err := windows.LocalFree(windows.Handle(unsafe.Pointer(b.pbData)))
+	if err != nil {
+		return errors.Wrap(err, "localfree")
+	}
+
+	return nil
+}
+
 // Encrypt a string value to a base64 string
 func Encrypt(secret string) (string, error) {
 	return encrypt(secret, cryptProtectUIForbidden)
@@ -70,8 +84,9 @@ func encryptBytes(data []byte, cf cryptProtect) ([]byte, error) {
 	if r == 0 {
 		return nil, errors.Wrap(err, "procencryptdata")
 	}
-	defer windows.LocalFree(windows.Handle(unsafe.Pointer(outblob.pbData)))
-	return outblob.toByteArray(), nil
+
+	enc := outblob.toByteArray()
+	return enc, outblob.free()
 }
 
 // EncryptBytesMachineLocal encrypts a byte array and returns a byte array and associates the data
@@ -93,8 +108,10 @@ func DecryptBytes(data []byte) ([]byte, error) {
 	if r == 0 {
 		return nil, errors.Wrap(err, "procdecryptdata")
 	}
-	defer windows.LocalFree(windows.Handle(unsafe.Pointer(outblob.pbData)))
-	return outblob.toByteArray(), nil
+
+	dec := outblob.toByteArray()
+	outblob.zeroMemory()
+	return dec, outblob.free()
 }
 
 // Decrypt a string to a string
