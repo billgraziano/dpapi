@@ -39,16 +39,19 @@ func newBlob(d []byte) *dataBlob {
 
 func (b *dataBlob) toByteArray() []byte {
 	d := make([]byte, b.cbData)
+	/* #nosec# G103 */
 	copy(d, (*[1 << 30]byte)(unsafe.Pointer(b.pbData))[:])
 	return d
 }
 
 func (b *dataBlob) zeroMemory() {
 	zeros := make([]byte, b.cbData)
+	/* #nosec# G103 */
 	copy((*[1 << 30]byte)(unsafe.Pointer(b.pbData))[:], zeros)
 }
 
 func (b *dataBlob) free() error {
+	/* #nosec# G103 */
 	_, err := windows.LocalFree(windows.Handle(unsafe.Pointer(b.pbData)))
 	if err != nil {
 		return errors.Wrap(err, "localfree")
@@ -94,8 +97,10 @@ func encryptBytes(data []byte, entropy []byte, cf cryptProtect) ([]byte, error) 
 	)
 
 	if len(entropy) > 0 {
+		/* #nosec# G103 */
 		r, _, err = procEncryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, uintptr(unsafe.Pointer(newBlob(entropy))), 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
 	} else {
+		/* #nosec# G103 */
 		r, _, err = procEncryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
 	}
 	if r == 0 {
@@ -134,8 +139,10 @@ func decryptBytes(data, entropy []byte, cf cryptProtect) ([]byte, error) {
 		err     error
 	)
 	if len(entropy) > 0 {
+		/* #nosec# G103 */
 		r, _, err = procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, uintptr(unsafe.Pointer(newBlob(entropy))), 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
 	} else {
+		/* #nosec# G103 */
 		r, _, err = procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
 	}
 	if r == 0 {
