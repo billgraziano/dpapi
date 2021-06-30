@@ -34,7 +34,7 @@ It creates a file named `domain.computer.user.stable.json` on the first run.  On
 References
 ----------
 
-* [DPAPI on Wikipedia](https://en.wikipedia.org/wiki/Data_Protection_API)
+* [Data Protection API](https://en.wikipedia.org/wiki/Data_Protection_API) (wikipedia.org)
 * [Windows Data Protection](https://docs.microsoft.com/en-us/previous-versions/ms995355(v=msdn.10)?redirectedfrom=MSDN) (microsoft.com)
 * [Troubleshooting the DPAPI](https://support.microsoft.com/en-us/help/309408/how-to-troubleshoot-the-data-protection-api-dpapi) (microsoft.com)
 * [CryptProtectData function](https://docs.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata) (microsoft.com)
