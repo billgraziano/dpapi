@@ -50,10 +50,10 @@ func run() (err error) {
 		return errors.Wrap(err, "filename")
 	}
 
-	// 2. if file doesn't exist, write and exit
-	info, err := os.Stat(fileName)
+	// 2. if file doesn't exist, write
+	_, err = os.Stat(fileName)
 	if err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "os.stat-1")
+		return errors.Wrap(err, "os.stat")
 	}
 
 	// file doesn't exist so write it
@@ -64,22 +64,22 @@ func run() (err error) {
 			return errors.Wrap(err, "json.marshalindent")
 		}
 
-		err = ioutil.WriteFile(fileName, body, 0700)
+		err = ioutil.WriteFile(fileName, body, 0600)
 		if err != nil {
 			return errors.Wrap(err, "ioutil.writefile")
 		}
 	}
 
-	info, err = os.Stat(fileName)
+	info, err := os.Stat(fileName)
 	if err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "os.stat-2")
+		return errors.Wrap(err, "os.stat")
 	}
 
 	// 3. read, decrypt, and compare
 	fmt.Printf("reading: %s (%v)\n", fileName, humanize.Time(info.ModTime()))
 	stable, err := readFile(fileName)
 	if err != nil {
-		return errors.Wrap(err, "decrypt")
+		return errors.Wrap(err, "readfile")
 	}
 
 	err = compare(stable, sf)
@@ -97,7 +97,7 @@ func compare(stable StaticFile, new StaticFile) error {
 	// User String
 	str, err := dpapi.Decrypt(stable.UserString)
 	if err != nil {
-		errors.Wrap(err, "user.string: dpapi.decrypt")
+		return errors.Wrap(err, "user.string: dpapi.decrypt")
 	}
 	if str != stableString {
 		fmt.Printf("decrypted user string from stable: '%s'  (expected : '%s')\n", str, stableString)
@@ -161,10 +161,12 @@ func encryptBytesToBase64(val string) (string, error) {
 }
 
 func readFile(fileName string) (sf StaticFile, err error) {
+	fileName = filepath.Clean(fileName)
 	_, err = os.Stat(fileName)
 	if err != nil {
 		return sf, errors.Wrap(err, "os.stat")
 	}
+	/* #nosec# G304 - fileName cleaned above */
 	bb, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return sf, errors.Wrap(err, "ioutil.readfile")
@@ -198,5 +200,6 @@ func fileName() (string, error) {
 
 	fileName := fmt.Sprintf("%s.%s.%s.stable.json", domain, host, username)
 	fileName = filepath.Join(wd, fileName)
+	fileName = filepath.Clean(fileName)
 	return fileName, nil
 }
