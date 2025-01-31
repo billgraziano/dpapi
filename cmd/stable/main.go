@@ -4,17 +4,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
 
 	"github.com/billgraziano/dpapi"
-	"github.com/dustin/go-humanize"
-
-	"github.com/pkg/errors"
 )
 
 // All bytes are stored in hex
@@ -42,18 +39,18 @@ func main() {
 func run() (err error) {
 	sf, err := encrypt()
 	if err != nil {
-		return errors.Wrap(err, "encrypt")
+		return fmt.Errorf("encrypt: %v", err)
 	}
 
 	fileName, err := fileName()
 	if err != nil {
-		return errors.Wrap(err, "filename")
+		return fmt.Errorf("filename: %v", err)
 	}
 
 	// 2. if file doesn't exist, write
 	_, err = os.Stat(fileName)
 	if err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "os.stat")
+		return fmt.Errorf("os.stat: %v", err)
 	}
 
 	// file doesn't exist so write it
@@ -61,30 +58,30 @@ func run() (err error) {
 		fmt.Printf("writing: %s\n", fileName)
 		body, err := json.MarshalIndent(sf, "", "	")
 		if err != nil {
-			return errors.Wrap(err, "json.marshalindent")
+			return fmt.Errorf("json.marshalindent: %v", err)
 		}
 
-		err = ioutil.WriteFile(fileName, body, 0600)
+		err = os.WriteFile(fileName, body, 0600)
 		if err != nil {
-			return errors.Wrap(err, "ioutil.writefile")
+			return fmt.Errorf("os.writefile: %v", err)
 		}
 	}
 
 	info, err := os.Stat(fileName)
 	if err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "os.stat")
+		return fmt.Errorf("os.state: %v", err)
 	}
 
 	// 3. read, decrypt, and compare
-	fmt.Printf("reading: %s (%v)\n", fileName, humanize.Time(info.ModTime()))
+	fmt.Printf("reading: %s (from %s)\n", fileName, info.ModTime().Format("2006-01-02"))
 	stable, err := readFile(fileName)
 	if err != nil {
-		return errors.Wrap(err, "readfile")
+		return fmt.Errorf("readfile: %v", err)
 	}
 
 	err = compare(stable, sf)
 	if err != nil {
-		return errors.Wrap(err, "compare")
+		return fmt.Errorf("compare: %v", err)
 	}
 
 	fmt.Println("all fields match")
@@ -97,7 +94,7 @@ func compare(stable StaticFile, new StaticFile) error {
 	// User String
 	str, err := dpapi.Decrypt(stable.UserString)
 	if err != nil {
-		return errors.Wrap(err, "user.string: dpapi.decrypt")
+		return fmt.Errorf("dpapi.decrypt: %v", err)
 	}
 	if str != stableString {
 		fmt.Printf("decrypted user string from stable: '%s'  (expected : '%s')\n", str, stableString)
@@ -108,7 +105,7 @@ func compare(stable StaticFile, new StaticFile) error {
 	// User Bytes
 	hexVal, err := decryptBytesBase64ToHex(stable.UserBytes)
 	if err != nil {
-		return errors.Wrap(err, "user.bytes")
+		return fmt.Errorf("decryptbytesbase64tohex: %v", err)
 	}
 	if hexVal != stableBytes {
 		fmt.Printf("decrypted user bytes from stable: '%s'  (expected : '%s')\n", hexVal, stableBytes)
@@ -121,12 +118,12 @@ func compare(stable StaticFile, new StaticFile) error {
 func decryptBytesBase64ToHex(val string) (string, error) {
 	bb, err := base64.StdEncoding.DecodeString(val)
 	if err != nil {
-		return "", errors.Wrap(err, "base64.stdencoding.decodestring")
+		return "", fmt.Errorf("base64.stdencoding.decodestring: %v", err)
 	}
 	// decrypt bytes
 	bb2, err := dpapi.DecryptBytes(bb)
 	if err != nil {
-		return "", errors.Wrap(err, "dpapi.decryptbytes")
+		return "", fmt.Errorf("dpapi.decryptbytes: %v", err)
 	}
 	// encode to hex
 	hexVal := hex.EncodeToString(bb2)
@@ -141,21 +138,24 @@ func encrypt() (StaticFile, error) {
 
 	sf.UserString, err = dpapi.Encrypt(stableString)
 	if err != nil {
-		return sf, errors.Wrap(err, "dpapi.encrypt")
+		return sf, fmt.Errorf("dpapi.encrypt: %v", err)
 	}
 
 	sf.UserBytes, err = encryptBytesToBase64(stableBytes)
+	if err != nil {
+		return sf, fmt.Errorf("encryptbytestobase64: %v", err)
+	}
 	return sf, nil
 }
 
 func encryptBytesToBase64(val string) (string, error) {
 	bb, err := hex.DecodeString(val)
 	if err != nil {
-		return "", errors.Wrap(err, "hex.decodestring")
+		return "", fmt.Errorf("hex.decodestring: %v", err)
 	}
 	encryptedBytes, err := dpapi.EncryptBytes(bb)
 	if err != nil {
-		return "", errors.Wrap(err, "dpapi.encryptbytes")
+		return "", fmt.Errorf("dpapi.encryptbytes: %v", err)
 	}
 	return base64.StdEncoding.EncodeToString(encryptedBytes), nil
 }
@@ -164,16 +164,16 @@ func readFile(fileName string) (sf StaticFile, err error) {
 	fileName = filepath.Clean(fileName)
 	_, err = os.Stat(fileName)
 	if err != nil {
-		return sf, errors.Wrap(err, "os.stat")
+		return sf, fmt.Errorf("os.state: %v", err)
 	}
 	/* #nosec# G304 - fileName cleaned above */
-	bb, err := ioutil.ReadFile(fileName)
+	bb, err := os.ReadFile(fileName)
 	if err != nil {
-		return sf, errors.Wrap(err, "ioutil.readfile")
+		return sf, fmt.Errorf("os.readfile: %v", err)
 	}
 	err = json.Unmarshal(bb, &sf)
 	if err != nil {
-		return sf, errors.Wrap(err, "json.unmarshal")
+		return sf, fmt.Errorf("json.unmarshal: %v", err)
 	}
 	return sf, nil
 }
@@ -181,15 +181,15 @@ func readFile(fileName string) (sf StaticFile, err error) {
 func fileName() (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
-		return "", errors.Wrap(err, "os.getwd")
+		return "", fmt.Errorf("os.getwd: %v", err)
 	}
 	host, err := os.Hostname()
 	if err != nil {
-		return "", errors.Wrap(err, "os.hostname")
+		return "", fmt.Errorf("os.hostname: %v", err)
 	}
 	user, err := user.Current()
 	if err != nil {
-		return "", errors.Wrap(err, "user.current")
+		return "", fmt.Errorf("user.current: %v", err)
 	}
 	parts := strings.Split(user.Username, "\\")
 	if len(parts) != 2 {

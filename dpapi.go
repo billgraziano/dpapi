@@ -2,9 +2,9 @@ package dpapi
 
 import (
 	"encoding/base64"
+	"fmt"
 	"unsafe"
 
-	"github.com/pkg/errors"
 	"golang.org/x/sys/windows"
 )
 
@@ -54,7 +54,7 @@ func (b *dataBlob) free() error {
 	/* #nosec# G103 */
 	_, err := windows.LocalFree(windows.Handle(unsafe.Pointer(b.pbData)))
 	if err != nil {
-		return errors.Wrap(err, "localfree")
+		return fmt.Errorf("windows.localfree: %w", err)
 	}
 
 	return nil
@@ -74,7 +74,7 @@ func encrypt(secret, entropy string, cf cryptProtect) (string, error) {
 	var b []byte
 	b, err := encryptBytes([]byte(secret), []byte(entropy), cf)
 	if err != nil {
-		return result, errors.Wrap(err, "encryptbytes")
+		return result, fmt.Errorf("encryptbytes: %w", err)
 	}
 	result = base64.StdEncoding.EncodeToString(b)
 	return result, nil
@@ -104,7 +104,7 @@ func encryptBytes(data []byte, entropy []byte, cf cryptProtect) ([]byte, error) 
 		r, _, err = procEncryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
 	}
 	if r == 0 {
-		return nil, errors.Wrap(err, "procencryptdata")
+		return nil, fmt.Errorf("procencryptdata: %w", err)
 	}
 
 	enc := outblob.toByteArray()
@@ -146,7 +146,7 @@ func decryptBytes(data, entropy []byte, cf cryptProtect) ([]byte, error) {
 		r, _, err = procDecryptData.Call(uintptr(unsafe.Pointer(newBlob(data))), 0, 0, 0, 0, uintptr(cf), uintptr(unsafe.Pointer(&outblob)))
 	}
 	if r == 0 {
-		return nil, errors.Wrap(err, "procdecryptdata")
+		return nil, fmt.Errorf("procdecryptdata: %w", err)
 	}
 
 	dec := outblob.toByteArray()
@@ -171,12 +171,12 @@ func DecryptBytesEntropy(data, entropy []byte) ([]byte, error) {
 func DecryptEntropy(data, entropy string) (string, error) {
 	raw, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return "", errors.Wrap(err, "decodestring")
+		return "", fmt.Errorf("decryptentropy: %w", err)
 	}
 
 	b, err := decryptBytes(raw, []byte(entropy), cryptProtectUIForbidden)
 	if err != nil {
-		return "", errors.Wrap(err, "decryptbytes")
+		return "", fmt.Errorf("decryptbytes: %w", err)
 	}
 	return string(b), nil
 }
