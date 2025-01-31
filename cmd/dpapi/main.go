@@ -19,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	if hexin == "" && str == "" && decrypt == "" {
-		fmt.Println("usage: go run .\\cmd\\dpapi\\main.go -hex 01020304 -encrypt test")
+		fmt.Println("usage: go run ./cmd/dpapi/main.go -hex 01020304 -encrypt test")
 		flag.Usage()
 		return
 	}

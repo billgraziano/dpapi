@@ -79,7 +79,7 @@ func run() (err error) {
 		return fmt.Errorf("readfile: %v", err)
 	}
 
-	err = compare(stable, sf)
+	err = compare(stable)
 	if err != nil {
 		return fmt.Errorf("compare: %v", err)
 	}
@@ -88,7 +88,7 @@ func run() (err error) {
 	return nil
 }
 
-func compare(stable StaticFile, new StaticFile) error {
+func compare(stable StaticFile) error {
 	var err error
 
 	// User String
